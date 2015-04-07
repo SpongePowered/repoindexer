@@ -1,17 +1,28 @@
 <!DOCTYPE html>
 <html>
-<head>
-
-    <title>{{title}} downloads</title>
-</head>
-<body>
-<h1>{{title}} downloads</h1>
-<ul>
-{{#mfiles}}
-{{version}} <a href="{{mainUrl}}">{{mainDescription}}</a>
-{{#entries}} <a href="{{url}}">{{description}}</a> {{/entries}}</br> {{/mfiles}}
-</br>
-last updated {{date}}
-</ul>
-</body>
+  <head>
+      <title>{{title}} downloads</title>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/uikit/2.18.0/css/uikit.gradient.min.css">
+  </head>
+  <body>
+    <div class="uk-container uk-container-center">
+      <h1>{{title}} downloads</h1>
+      <table class="uk-table uk-table-hover uk-table-striped">
+        {{#mfiles}}
+          <tr>
+            <td>{{version}} </td>
+            <td class="uk-text-right">
+              <a href="{{mainUrl}}" class="uk-button uk-button-primary">{{mainDescription}}</a>
+              {{#entries}}
+                <a href="{{url}}" class="uk-button">{{description}}</a> 
+              {{/entries}}
+            </td>
+          </tr>
+        {{/mfiles}}
+      </table>
+    last updated {{date}}
+    </div>
+    
+  </body>
 </html>
+
