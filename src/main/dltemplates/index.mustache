@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <title>{{title}} downloads</title>
+</head>
+<body>
+<h1>{{title}} downloads</h1>
+<ul>
+{{#mfiles}}
+{{version}} <a href="{{mainUrl}}">{{mainDescription}}</a>
+{{#entries}} <a href="{{url}}">{{description}}</a> {{/entries}}</br> {{/mfiles}}
+</br>
+last updated {{date}}
+</ul>
+</body>
+</html>

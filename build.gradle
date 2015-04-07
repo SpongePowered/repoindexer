@@ -1,0 +1,233 @@
+// Gradle repositories and dependencies
+buildscript {
+    repositories {
+        maven {
+            name = "sonatype"
+            url = "https://oss.sonatype.org/content/repositories/snapshots/"
+        }
+        jcenter()
+        mavenCentral()
+        mavenLocal()
+    }
+
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.0'
+        classpath 'nl.javadude.gradle.plugins:license-gradle-plugin:0.11.0'
+
+    }
+}
+
+// Apply plugin
+apply plugin: 'java'
+apply plugin: 'license'
+//apply plugin: 'checkstyle'
+apply plugin: 'maven'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+
+// Default tasks
+defaultTasks 'licenseFormat', 'build'
+//defaultTasks 'licenseFormat', 'check', 'build'
+
+// Basic project information
+group = 'org.spongepowered'
+archivesBaseName = 'repoindexer'
+version = '1.0-SNAPSHOT'
+
+// Extended project information
+ext.projectName = 'repoindexer'
+ext.inceptionYear = '2015'
+ext.packaging = 'jar'
+ext.url = 'http://spongepowered.org'
+ext.description = 'repoindexer'
+ext.organization = 'SpongePowered'
+
+// Define variables
+ext.buildNumber = project.hasProperty("buildNumber") ? buildNumber : '0'
+ext.ciSystem = project.hasProperty("ciSystem") ? ciSystem : 'unknown'
+ext.commit = project.hasProperty("commit") ? commit : 'unknown'
+
+// Minimum version of Java required
+sourceCompatibility = '1.7'
+targetCompatibility = '1.7'
+
+// Project repositories
+repositories {
+    mavenCentral()
+
+    // Add Sponge repo for custom checkstyle implementation to fix some wrong warnings
+    maven { url 'http://repo.spongepowered.org/maven' }
+}
+
+configurations {
+    deployerJars // maven stuff
+}
+
+// Project dependencies
+dependencies {
+    compile 'org.slf4j:slf4j-api:1.7.7'
+    compile 'com.google.guava:guava:17.0'
+    compile 'com.google.code.findbugs:jsr305:1.3.9'
+    compile 'commons-io:commons-io:2.4'
+    compile 'org.apache.commons:commons-lang3:3.3.2'
+    compile 'org.jboss.shrinkwrap.resolver:shrinkwrap-resolver-depchain:2.2.0-beta-1'
+    compile 'com.github.spullara.mustache.java:compiler:0.8.17'
+    compile 'commons-net:commons-net:3.3'//ftp
+    compile 'com.jcraft:jsch:0.1.52'//sftp
+    compile 'com.beust:jcommander:1.30'
+    testCompile 'junit:junit:4.11'
+    testCompile 'org.hamcrest:hamcrest-library:1.3'
+    testCompile 'org.mockito:mockito-core:1.9.0'
+
+    //checkstyle 'org.spongepowered:checkstyle:6.1.1-sponge1'
+    
+    // maven
+    deployerJars 'org.apache.maven.wagon:wagon-ftp:2.7'
+}
+
+// Filter, process, and include resources
+processResources {
+    // Include in final JAR
+    from 'LICENSE.txt'
+}
+
+shadowJar  {
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+    classifier = ''
+}
+build.dependsOn(shadowJar)
+
+// License header formatting
+license {
+    ext.name = project.name
+    ext.organization = project.organization
+    ext.url = project.url
+    ext.year = project.inceptionYear
+    exclude "**/*.info"
+    exclude "assets/**"
+    header file('HEADER.txt')
+    sourceSets = project.sourceSets
+    ignoreFailures false
+    strictCheck true
+    mapping {
+        java = 'SLASHSTAR_STYLE'
+    }
+}
+
+test {
+    testLogging {
+        exceptionFormat = 'full'
+    }
+}
+
+/*checkstyle {
+    configFile = file('checkstyle.xml')
+    configProperties = [
+            "name": project.name,
+            "organization": project.organization,
+            "url": project.url,
+            "year": project.inceptionYear,
+            "basedir": project.projectDir,
+            "severity": 'warning'
+    ]
+}*/
+
+// Source compiler configuration
+configure([compileJava, compileTestJava]) {
+    options.compilerArgs += ['-Xlint:all', '-Xlint:-path']
+    options.deprecation = true
+    options.encoding = 'utf8'
+}
+
+javadoc {
+   options.jFlags('-Xms256m', '-Xmx512m')
+   options.links("http://docs.guava-libraries.googlecode.com/git-history/v17.0/javadoc/",
+                 "http://google.github.io/guice/api-docs/latest/javadoc/",
+                 "http://flowpowered.com/math/",
+                 "http://asm.ow2.org/asm50/javadoc/user/",
+                 "http://www.slf4j.org/apidocs/",
+                 "http://docs.oracle.com/javase/6/docs/api/")
+}
+
+if (JavaVersion.current().isJava8Compatible()) {
+    tasks.withType(Javadoc) {
+        // disable the crazy super-strict doclint tool in Java 8
+        options.addStringOption('Xdoclint:none', '-quiet')
+    }
+}
+
+// JAR manifest configuration
+jar.manifest.mainAttributes(
+        "Built-By": System.properties['user.name'],
+        "Created-By": System.properties['java.vm.version'] + " (" + System.properties['java.vm.vendor'] + ")",
+        "Implementation-Title": name,
+        "Implementation-Version": version + "+" + ciSystem + "-b" + buildNumber + ".git-" + commit,
+        "Implementation-Vendor": url,
+        "Main-Class": "org.spongepowered.repoindexer.EntryPoint")
+
+task sourceJar(type: Jar) {
+	from sourceSets.main.java
+	from sourceSets.main.resources
+	classifier = "sources"
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+	from javadoc.destinationDir
+	classifier = "javadoc"
+}
+
+artifacts {
+    archives jar
+    archives sourceJar
+    archives javadocJar
+}
+
+uploadArchives {
+    repositories {
+
+        mavenDeployer {
+            configuration = configurations.deployerJars
+
+            if (project.hasProperty("chRepo"))
+            {
+                repository(url: project.chRepo) {
+                    authentication(userName: project.chUsername, password: project.chPassword)
+                }
+            }
+
+            pom {
+                groupId = project.group
+                version = project.version
+                artifactId = project.archivesBaseName
+                project {
+                    name project.archivesBaseName
+                    packaging 'jar'
+                    description 'repo indexer'
+                    url 'http://www.spongepowered.org/'
+
+                    scm {
+                        url 'https://github.com/SpongePowered/repoindexer'
+                        connection 'scm:git:git://github.com/SpongePowered/repoindexer.git'
+                        developerConnection 'scm:git:git@github.com:SpongePowered/repoindexer.git'
+                    }
+
+                    issueManagement {
+                        system 'youtrack'
+                        url 'https://issues.spongepowered.org/'
+                    }
+
+                    licenses {
+                        license {
+                            name 'MIT license'
+                            url 'http://opensource.org/licenses/MIT'
+                            distribution 'repo'
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
