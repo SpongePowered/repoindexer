@@ -50,6 +50,9 @@ public class Cmd {
     @Parameter(names = {"--ftpurl", "-l"}, description = "ftpurl")
     public String url = null;
 
+    @Parameter(names = {"--localLocation","-o"}, description = "local location to copy index file to")
+    public String localLoc = null;
+
     @Parameter(names = {"--ftpmode", "-f"}, description = "true = FTP false=sftp")
     public boolean ftpmode = true;
 

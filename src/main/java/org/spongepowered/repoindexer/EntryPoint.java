@@ -27,6 +27,7 @@ package org.spongepowered.repoindexer;
 import com.beust.jcommander.JCommander;
 import com.google.common.collect.Lists;
 import org.apache.commons.io.Charsets;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.jboss.shrinkwrap.resolver.api.maven.Maven;
 import org.jboss.shrinkwrap.resolver.api.maven.MavenResolvedArtifact;
@@ -109,6 +110,15 @@ public class EntryPoint {
             upload(output, ftpUrl, user, pass,
                    remotebase + artifact.getGroupId().replace(".", "/") + "/" + artifact.getArtifactId().replace(".", "/") + "/index.html", type);
         }
+        if (Cmd.getInstance().localLoc != null && !Cmd.getInstance().localLoc.isEmpty()) {
+            copy(output, Cmd.getInstance().localLoc + "/" +
+                         artifact.getGroupId().replace(".", "/") + "/" + artifact.getArtifactId().replace(".", "/") + "/index.html");
+
+        }
+    }
+
+    public static void copy(File toCopy, String localLocation) throws IOException {
+        FileUtils.copyFile(toCopy, new File(localLocation));
     }
 
     public static void upload(File toUpload, String ftpUrl, String user, String pass, String remoteloc, FTPType type) {
