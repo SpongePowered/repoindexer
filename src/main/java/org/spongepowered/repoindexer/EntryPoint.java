@@ -28,7 +28,6 @@ import com.beust.jcommander.JCommander;
 import com.google.common.collect.Lists;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.IOUtils;
-import org.eclipse.aether.transfer.ArtifactNotFoundException;
 import org.jboss.shrinkwrap.resolver.api.maven.Maven;
 import org.jboss.shrinkwrap.resolver.api.maven.MavenResolvedArtifact;
 import org.jboss.shrinkwrap.resolver.api.maven.coordinate.MavenCoordinate;
@@ -195,10 +194,12 @@ public class EntryPoint {
         String resolved = artifact.getResolvedVersion();
         MavenCoordinate mc = artifact.getCoordinate();
         if (mc.getClassifier() == null || mc.getClassifier().equals("")) {
-            return url + mc.getGroupId().replace(".", "/") + "/" + mc.getArtifactId().replace(".", "/") + "/" + mc.getArtifactId() + "-" + resolved
+            return url + mc.getGroupId().replace(".", "/") + "/" + mc.getArtifactId().replace(".", "/") + "/" + mc.getVersion() + "/" + mc
+                    .getArtifactId() + "-" + resolved
                    + "." + mc.getPackaging().getExtension();
         } else {
-            return url + mc.getGroupId().replace(".", "/") + "/" + mc.getArtifactId().replace(".", "/") + "/" + mc.getArtifactId() + "-" + resolved
+            return url + mc.getGroupId().replace(".", "/") + "/" + mc.getArtifactId().replace(".", "/") + "/" + mc.getVersion() + "/" + mc
+                    .getArtifactId() + "-" + resolved
                    + "-" + mc.getClassifier()
                    + "." + mc.getPackaging().getExtension();
         }
