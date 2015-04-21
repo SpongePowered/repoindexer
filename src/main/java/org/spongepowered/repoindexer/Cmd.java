@@ -53,7 +53,7 @@ public class Cmd {
     @Parameter(names = {"--localLocation","-o"}, description = "local location to copy index file to")
     public String localLoc = null;
 
-    @Parameter(names = {"--ftpmode", "-f"}, description = "true = FTP false=sftp")
+    @Parameter(names = {"--ftpmode", "-f"}, description = "true = FTP false=sftp", arity = 1)
     public boolean ftpmode = true;
 
     @Parameter(names = {"--base", "-b"}, description = "base location to deploy in ftp/sftp repo")

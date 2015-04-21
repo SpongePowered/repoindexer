@@ -85,7 +85,7 @@ public class EntryPoint {
             }
             process(new File(Cmd.getInstance().loc), out, artifact, Cmd.getInstance().url, Cmd.getInstance().user, Cmd.getInstance().pass,
                     Cmd.getInstance().base,
-                    FTPType.FTP);
+                    Cmd.getInstance().ftpmode? FTPType.FTP : FTPType.SFTP);
         } catch (Exception e) {
             e.printStackTrace();
         }
