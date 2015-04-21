@@ -28,6 +28,7 @@ import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 
@@ -69,6 +70,7 @@ public class FTPUtils {
         }
     }
     public static boolean uploadSFTP(String user, String pass, String server, File local, String remoteLocation) {
+        System.out.println("uploading to SFTP");
         JSch jsch = new JSch();
         Session session = null;
         Channel channel = null;
@@ -85,14 +87,12 @@ public class FTPUtils {
             channel.setOutputStream(System.out);
             channel.connect();
             sftpChannel = (ChannelSftp) channel;
-
-            byte[] bufr = new byte[(int) local.length()];
+            System.out.println("prepped to upload to " + remoteLocation);
             FileInputStream fis = new FileInputStream(local);
-            fis.read(bufr);
-            ByteArrayInputStream fileStream = new ByteArrayInputStream(bufr);
-            sftpChannel.put(fileStream, remoteLocation);
-            fileStream.close();
+            System.out.println("uploading");
+            sftpChannel.put(fis, remoteLocation);
             done = true;
+            System.out.println("uploaded " + local.getCanonicalPath());
         } catch (IOException ex) {
             System.out.println("Error: " + ex.getMessage());
             ex.printStackTrace();
