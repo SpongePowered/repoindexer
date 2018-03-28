@@ -24,6 +24,8 @@
  */
 package org.spongepowered.repoindexer;
 
+import com.google.common.base.Optional;
+
 import javax.annotation.Nullable;
 
 /**
@@ -45,6 +47,18 @@ public class Variation {
             this.ext = "jar";
         this.classifier = classifier;
     }
+
+    /**
+     *
+     * @param classifier the classifier of the artifact if used
+     * @param extension the extension of the artifact(jar by default)
+     * @param after the first version that has this artifact type
+     */
+    public Variation(@Nullable String classifier, @Nullable String extension, @Nullable String after) {
+        this(classifier, extension);
+        this.after = Optional.fromNullable(after);
+    }
     public String ext;
     public String classifier;
+    public Optional<String> after;
 }

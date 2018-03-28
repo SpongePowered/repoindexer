@@ -65,10 +65,18 @@ public class Cmd {
     @Parameter(names = {"--mavenrepo", "-m"}, description = "maven repo url")
     public String mavenrepo = "http://repo.spongepowered.org/maven/";
 
+    @Parameter(names = {"--additionalRepos"}, description = "additional maven repos to use for dependency resolution use ^ to seperate")
+    public String additionalRepos = null;
+
+    @Parameter(names = {"--excludes", "-x"}, description = "allows specifying certain artifacts that should be excluded from transitive resolution in the tool group:artifact seperated by ^")
+    public String exclude = null;
+
     @Parameter(names = {"--coord", "-c"}, description = "maven coordinate in gradle format NO VERSION, classifier, or extension")
     public String mavencoord = "org.spongepowered:sponge";
 
-    @Parameter(names = {"--extra", "-e"}, description = " classifier^extension seperated by % use the text 'null' for null data")
+    @Parameter(names = {"--extra", "-e"}, description = " classifier^extension*after seperated by % use the text 'null' for null data, can add *VERSION to specify that something only exists after that version")
     public String extra = "sources^jar%javadoc^jar";
 
+    @Parameter(names = {"--deployFile", "-d"}, description = "change the filename to deploy to")
+    public String deployFile = "index.html";
 }

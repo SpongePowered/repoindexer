@@ -35,6 +35,7 @@ import org.jboss.shrinkwrap.resolver.api.maven.coordinate.MavenCoordinate;
 import org.jboss.shrinkwrap.resolver.api.maven.repository.MavenRemoteRepositories;
 import org.jboss.shrinkwrap.resolver.api.maven.repository.MavenRemoteRepository;
 import org.jboss.shrinkwrap.resolver.api.maven.repository.MavenUpdatePolicy;
+import org.jboss.shrinkwrap.resolver.api.maven.strategy.RejectDependenciesStrategy;
 import org.spongepowered.repoindexer.mavenmeta.Metadata;
 
 import java.io.File;
@@ -62,24 +63,32 @@ public class EntryPoint {
             String[] repostuff = Cmd.getInstance().mavencoord.split(":");
             artifact = new Artifact(new Repo(Cmd.getInstance().mavenrepo), repostuff[0], repostuff[1]);
             String[] sets = Cmd.getInstance().extra.split("%");
+            //classifier^extension*version
             for (String s : sets) {
                 System.out.println(s);
                 String[] tmp = s.split("\\^");
+                String vsn = null;
                 if (tmp.length > 1) {
                     if (tmp[0].equals("null")) {
                         tmp[0] = null;
                     }
+
+                    if(tmp[1].contains("*")) {
+                        String[] tmp2 = tmp[1].split("\\*");
+                        vsn = tmp2[1];
+                        tmp[1] = tmp2[0];
+                    }
                     if (tmp[1].equals("null")) {
                         tmp[1] = null;
                     }
-                    artifact.addVariation(new Variation(tmp[0], tmp[1]));
-                    System.out.println("added variation " + tmp[0] + " " + tmp[1]);
+                    artifact.addVariation(new Variation(tmp[0], tmp[1], vsn));
+                    System.out.println("added variation " + tmp[0] + " " + tmp[1] + " "+ vsn);
                 }
             }
             //artifact.addVariation(new Variation(null, "exe"));
             //artifact.addVariation(new Variation(null, "zip"));
             //File location = new File("/Users/progwml6/repos/mc/repoindex/src/main/dltemplates/index.mustache");
-            File out = new File("build/repoindexer/index.html");
+            File out = new File("build/repoindexer/" + Cmd.getInstance().deployFile);
             if (!out.getParentFile().exists()) {
                 out.getParentFile().mkdirs();
             }
@@ -108,11 +117,11 @@ public class EntryPoint {
         System.out.println("uploading if needed");
         if (Cmd.getInstance().url != null) {
             upload(output, ftpUrl, user, pass,
-                   remotebase + artifact.getGroupId().replace(".", "/") + "/" + artifact.getArtifactId().replace(".", "/") + "/index.html", type);
+                   remotebase + artifact.getGroupId().replace(".", "/") + "/" + artifact.getArtifactId().replace(".", "/") + "/" + Cmd.getInstance().deployFile, type);
         }
         if (Cmd.getInstance().localLoc != null && !Cmd.getInstance().localLoc.isEmpty()) {
             copy(output, Cmd.getInstance().localLoc + "/" +
-                         artifact.getGroupId().replace(".", "/") + "/" + artifact.getArtifactId().replace(".", "/") + "/index.html");
+                         artifact.getGroupId().replace(".", "/") + "/" + artifact.getArtifactId().replace(".", "/") + "/" + Cmd.getInstance().deployFile);
 
         }
     }
@@ -147,34 +156,39 @@ public class EntryPoint {
     private static void getAllVersionPoms(Metadata md, Artifact artifact) throws IOException, JAXBException {
         List<String> ls = Lists.newArrayList();
         for (String s : md.versioning.versions.version) {
+            System.out.println("running " + artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + s);
             List<MavenResolvedArtifact>
                     mra =
                     Maven.configureResolver().withRemoteRepo(mvnremote).withMavenCentralRepo(false)
-                            .resolve(artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + s).withoutTransitivity().asList(
-                            MavenResolvedArtifact.class);
+                            .resolve(artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + s)
+                                    .withoutTransitivity()
+                            .asList(
+                                    MavenResolvedArtifact.class);
             for (MavenResolvedArtifact mr : mra) {
                 ResolvedArtifact resolved = new ResolvedArtifact(mvnremote, mr);
                 try {
                     //ls.add(mr.getResolvedVersion() + " artifacturl: " + mr.as(URL.class));
                     for (Variation v : artifact.getVariations()) {
-                        String classifier = "";
-                        try {
-                            if (v.classifier != null && !v.classifier.isEmpty()) {
-                                classifier = ":" + v.classifier;
+                        if((v.after.isPresent() && applies(v.after.get(), mr.getResolvedVersion()))|| !v.after.isPresent()) {
+                            String classifier = "";
+                            try {
+                                if (v.classifier != null && !v.classifier.isEmpty()) {
+                                    classifier = ":" + v.classifier;
+                                }
+                                List<MavenResolvedArtifact>
+                                        mraInner =
+                                        Maven.configureResolver().withRemoteRepo(mvnremote).withMavenCentralRepo(false)
+                                                .resolve(artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + v.ext + classifier + ":" + s)
+                                                .withoutTransitivity()
+                                                .asList(MavenResolvedArtifact.class);
+                                for (MavenResolvedArtifact mr2 : mraInner) {
+                                    resolved.resolvedArtifactClassifiers.add(mr2);
+                                    //ls.add("artifacturl(classifier): " + mr2.as(URL.class));
+                                }
+                            } catch (Exception e) {
+                                //System.out.println("issue with classifier " + classifier.replace(":", "") + " ext " + v.ext + " artifact " + mr.as(URL.class));
+                                e.printStackTrace();
                             }
-                            List<MavenResolvedArtifact>
-                                    mraInner =
-                                    Maven.configureResolver().withRemoteRepo(mvnremote).withMavenCentralRepo(false)
-                                            .resolve(artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + v.ext + classifier + ":" + s)
-                                            .withoutTransitivity()
-                                            .asList(MavenResolvedArtifact.class);
-                            for (MavenResolvedArtifact mr2 : mraInner) {
-                                resolved.resolvedArtifactClassifiers.add(mr2);
-                                //ls.add("artifacturl(classifier): " + mr2.as(URL.class));
-                            }
-                        } catch (Exception e) {
-                            //System.out.println("issue with classifier " + classifier.replace(":", "") + " ext " + v.ext + " artifact " + mr.as(URL.class));
-                            e.printStackTrace();
                         }
                     }
                     artifactslist.add(resolved);
@@ -187,6 +201,13 @@ public class EntryPoint {
             System.out.println(s);
         }
 
+    }
+
+    public static boolean applies(String after, String resolved) {
+        com.github.zafarkhaja.semver.Version vsna = com.github.zafarkhaja.semver.Version.valueOf(after);
+        com.github.zafarkhaja.semver.Version vsnr = com.github.zafarkhaja.semver.Version.valueOf(resolved);
+        int ret = vsna.compareWithBuildsTo(vsnr);
+        return ret <=0;
     }
 
 
