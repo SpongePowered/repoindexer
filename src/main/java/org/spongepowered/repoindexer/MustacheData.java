@@ -25,6 +25,7 @@
 package org.spongepowered.repoindexer;
 
 import com.google.common.collect.Lists;
+import org.spongepowered.repoindexer.mavenmeta.Metadata;
 
 import java.text.DateFormat;
 import java.util.Date;
@@ -33,15 +34,19 @@ import java.util.Locale;
 
 public class MustacheData {
 
-    public MustacheData(String title, List<ResolvedArtifact> ra) {
+    public MustacheData(String title, List<SuperStringPair> superStringPairs) {
         mfiles = Lists.newArrayList();
-        System.out.println(ra.size());
+        //System.out.println(ra.size());
+        System.out.println(superStringPairs.size());
         this.title = title;
-        for (ResolvedArtifact res : ra) {
+        for (SuperStringPair ssp: superStringPairs){
+            mfiles.add(new MFile(ssp));
+        }
+        /*for (ResolvedArtifact res : ra) {
             SuperStringPair ssp = res.getMainDownloadInfo();
             //System.out.println(spairs.size());
             mfiles.add(new MFile(ssp));
-        }
+        }*/
         mfiles = Lists.reverse(mfiles);
         System.out.println(mfiles.size());
         DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.LONG, new Locale("en", "EN"));

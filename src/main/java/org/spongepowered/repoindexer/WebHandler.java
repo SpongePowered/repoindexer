@@ -39,12 +39,12 @@ import java.util.List;
 
 public class WebHandler {
 
-    public static void createWebpage(File input, File output,String title, List<ResolvedArtifact> artifactList, String projectName) {
+    public static void createWebpage(File input, File output,String title, String projectName, List<SuperStringPair> lst) {
         try {
             MustacheFactory mf = new DefaultMustacheFactory();
             Mustache mustache = mf.compile(new StringReader(FileUtils.readFileToString(input)), "example");
             //mustache.execute(new PrintWriter(System.out), new MustacheData(title, artifactList)).flush();
-            mustache.execute(new FileWriterWithEncoding(output, Charsets.UTF_8), new MustacheData(title, artifactList)).flush();
+            mustache.execute(new FileWriterWithEncoding(output, Charsets.UTF_8), new MustacheData(title, lst)).flush();
 
         } catch (Exception e) {
             e.printStackTrace();

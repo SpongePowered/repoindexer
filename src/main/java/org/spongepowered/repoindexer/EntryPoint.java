@@ -29,6 +29,7 @@ import com.google.common.collect.Lists;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.maven.artifact.versioning.ComparableVersion;
 import org.jboss.shrinkwrap.resolver.api.maven.Maven;
 import org.jboss.shrinkwrap.resolver.api.maven.MavenResolvedArtifact;
 import org.jboss.shrinkwrap.resolver.api.maven.coordinate.MavenCoordinate;
@@ -40,6 +41,7 @@ import org.spongepowered.repoindexer.mavenmeta.Metadata;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
 
@@ -53,13 +55,12 @@ import javax.xml.bind.Unmarshaller;
 public class EntryPoint {
 
     private static MavenRemoteRepository mvnremote;
-    private static List<ResolvedArtifact> artifactslist;
+    private static List<SuperStringPair> vsns = Lists.newArrayList();
 
     public static void main(String args[]) {
         try {
             JCommander jc = new JCommander(Cmd.getInstance(), args);
             Artifact artifact;
-            artifactslist = Lists.newArrayList();
             String[] repostuff = Cmd.getInstance().mavencoord.split(":");
             artifact = new Artifact(new Repo(Cmd.getInstance().mavenrepo), repostuff[0], repostuff[1]);
             String[] sets = Cmd.getInstance().extra.split("%");
@@ -102,7 +103,6 @@ public class EntryPoint {
 
     public static void process(File input, File output, Artifact artifact, String ftpUrl, String user, String pass, String remotebase, FTPType type)
             throws IOException, JAXBException {
-        artifactslist = Lists.newArrayList();
         mvnremote = MavenRemoteRepositories.createRemoteRepository("UserRemoteRepo", artifact.getRepo().getUrl(), "default").setUpdatePolicy(
                 MavenUpdatePolicy.UPDATE_POLICY_NEVER);
         System.out.println("using repo: " + mvnremote.getUrl());
@@ -111,13 +111,17 @@ public class EntryPoint {
         System.out.println(xml);
         Metadata md = parsemavenmeta(xml);
         debugmeta(md);
-        getAllVersionPoms(md, artifact);
+        checkAllFiles(md,artifact);
+        //getAllVersionPoms(md, artifact);
         System.out.println("generating page");
-        WebHandler.createWebpage(input, output, artifact.getArtifactId(), artifactslist, artifact.getArtifactId());
+        WebHandler.createWebpage(input, output, artifact.getArtifactId(), artifact.getArtifactId(),vsns);
         System.out.println("uploading if needed");
         if (Cmd.getInstance().url != null) {
             upload(output, ftpUrl, user, pass,
                    remotebase + artifact.getGroupId().replace(".", "/") + "/" + artifact.getArtifactId().replace(".", "/") + "/" + Cmd.getInstance().deployFile, type);
+        }
+        if(Cmd.getInstance().bucket != null) {
+            FTPUtils.uploadS3(Cmd.getInstance().key, Cmd.getInstance().securekey, Cmd.getInstance().bucket, Cmd.getInstance().region, output,remotebase + artifact.getGroupId().replace(".", "/") + "/" + artifact.getArtifactId().replace(".", "/") + "/" + Cmd.getInstance().deployFile);
         }
         if (Cmd.getInstance().localLoc != null && !Cmd.getInstance().localLoc.isEmpty()) {
             copy(output, Cmd.getInstance().localLoc + "/" +
@@ -153,55 +157,56 @@ public class EntryPoint {
 
     }
 
-    private static void getAllVersionPoms(Metadata md, Artifact artifact) throws IOException, JAXBException {
-        List<String> ls = Lists.newArrayList();
-        for (String s : md.versioning.versions.version) {
-            System.out.println("running " + artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + s);
-            List<MavenResolvedArtifact>
-                    mra =
-                    Maven.configureResolver().withRemoteRepo(mvnremote).withMavenCentralRepo(false)
-                            .resolve(artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + s)
-                                    .withoutTransitivity()
-                            .asList(
-                                    MavenResolvedArtifact.class);
-            for (MavenResolvedArtifact mr : mra) {
-                ResolvedArtifact resolved = new ResolvedArtifact(mvnremote, mr);
-                try {
-                    //ls.add(mr.getResolvedVersion() + " artifacturl: " + mr.as(URL.class));
-                    for (Variation v : artifact.getVariations()) {
-                        if((v.after.isPresent() && applies(v.after.get(), mr.getResolvedVersion()))|| !v.after.isPresent()) {
-                            String classifier = "";
-                            try {
-                                if (v.classifier != null && !v.classifier.isEmpty()) {
-                                    classifier = ":" + v.classifier;
-                                }
-                                List<MavenResolvedArtifact>
-                                        mraInner =
-                                        Maven.configureResolver().withRemoteRepo(mvnremote).withMavenCentralRepo(false)
-                                                .resolve(artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + v.ext + classifier + ":" + s)
-                                                .withoutTransitivity()
-                                                .asList(MavenResolvedArtifact.class);
-                                for (MavenResolvedArtifact mr2 : mraInner) {
-                                    resolved.resolvedArtifactClassifiers.add(mr2);
-                                    //ls.add("artifacturl(classifier): " + mr2.as(URL.class));
-                                }
-                            } catch (Exception e) {
-                                //System.out.println("issue with classifier " + classifier.replace(":", "") + " ext " + v.ext + " artifact " + mr.as(URL.class));
-                                e.printStackTrace();
-                            }
-                        }
-                    }
-                    artifactslist.add(resolved);
-                } catch (Exception exc) {
-                    exc.printStackTrace();
-                }
+    private static String getLink(Artifact artifact, String version, Variation v){
+
+            String ret = String.format("%s%s/%s/%s/%s-%s",artifact.getRepo().getUrl(), artifact.getGroupId().replace('.', '/'), artifact.getArtifactId(), version, artifact.getArtifactId(), version);
+            if (v.classifier != null && !v.classifier.isEmpty()) {
+                ret += "-" + v.classifier;
             }
-        }
-        for (String s : ls) {
-            System.out.println(s);
-        }
+            return ret + "." + v.ext;
 
     }
+
+    private static boolean checkFile(String link){
+            try {
+                HttpURLConnection.setFollowRedirects(true);
+                HttpURLConnection con =
+                        (HttpURLConnection) new URL(link).openConnection();
+                con.setRequestMethod("HEAD");
+                return (con.getResponseCode() == HttpURLConnection.HTTP_OK);
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                return false;
+            }
+
+    }
+
+    private static void checkAllFiles(Metadata md, Artifact artifact) {
+
+        List<String> ls = Lists.newArrayList();
+        for (String s : md.versioning.versions.version) {
+            String link = getLink(artifact,s, new Variation(null, null));
+            boolean exists = checkFile(link);
+            //System.out.println(exists + " " + link);
+            SuperStringPair ssp = new SuperStringPair(s,new StringPair("main", link) ,Lists.<StringPair>newArrayList());
+            System.out.println("running " + artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + s);
+            for (Variation v: artifact.getVariations()){
+                if((v.after.isPresent() && ! v.after.get().isEmpty() && applies(v.after.get(), s))|| !v.after.isPresent() || (v.after.isPresent() && v.after.get().isEmpty())) {
+                    System.out.println("running " + artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + s + ":" + v.classifier + " " + v.ext + "" + (v.after.isPresent() ? v.after.get():" "));
+                    link = getLink(artifact,s, v);
+                    exists = checkFile(link);
+                    if(exists) {
+                        StringPair spinner = new StringPair(v.classifier, link);
+                        ssp.sub.add(spinner);
+                    }
+                    //System.out.println(exists + " " + link);
+                }
+            }
+            vsns.add(ssp);
+        }
+    }
+
 
     public static boolean applies(String after, String resolved) {
         com.github.zafarkhaja.semver.Version vsna = com.github.zafarkhaja.semver.Version.valueOf(after);

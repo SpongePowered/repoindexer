@@ -50,6 +50,18 @@ public class Cmd {
     @Parameter(names = {"--ftpurl", "-l"}, description = "ftpurl")
     public String url = null;
 
+    @Parameter(names = {"--key", "-k"}, description = "s3 key")
+    public String key = null;
+
+    @Parameter(names = {"--secure-key", "-s"}, description = "s3 secure key")
+    public String securekey = null;
+
+    @Parameter(names = {"--bucket", "-t"}, description = "s3 bucket")
+    public String bucket = null;
+
+    @Parameter(names = {"--region", "-r"}, description = "s3 region")
+    public String region = null;
+
     @Parameter(names = {"--localLocation","-o"}, description = "local location to copy index file to")
     public String localLoc = null;
 

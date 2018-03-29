@@ -35,7 +35,6 @@ public class Variation {
 
     public static Variation SOURCES_JAR = new Variation("sources", "jar");
     public static Variation JAVADOC_JAR = new Variation("javadoc", "jar");
-
     /**
      *
      * @param classifier the classifier of the artifact if used
@@ -58,7 +57,8 @@ public class Variation {
         this(classifier, extension);
         this.after = Optional.fromNullable(after);
     }
-    public String ext;
+    public String ext = "jar";
     public String classifier;
     public Optional<String> after;
+
 }
