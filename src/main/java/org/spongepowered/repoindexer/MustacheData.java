@@ -25,7 +25,6 @@
 package org.spongepowered.repoindexer;
 
 import com.google.common.collect.Lists;
-import org.spongepowered.repoindexer.mavenmeta.Metadata;
 
 import java.text.DateFormat;
 import java.util.Date;
@@ -42,11 +41,6 @@ public class MustacheData {
         for (SuperStringPair ssp: superStringPairs){
             mfiles.add(new MFile(ssp));
         }
-        /*for (ResolvedArtifact res : ra) {
-            SuperStringPair ssp = res.getMainDownloadInfo();
-            //System.out.println(spairs.size());
-            mfiles.add(new MFile(ssp));
-        }*/
         mfiles = Lists.reverse(mfiles);
         System.out.println(mfiles.size());
         DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.LONG, new Locale("en", "EN"));

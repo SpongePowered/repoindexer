@@ -29,14 +29,6 @@ import com.google.common.collect.Lists;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.maven.artifact.versioning.ComparableVersion;
-import org.jboss.shrinkwrap.resolver.api.maven.Maven;
-import org.jboss.shrinkwrap.resolver.api.maven.MavenResolvedArtifact;
-import org.jboss.shrinkwrap.resolver.api.maven.coordinate.MavenCoordinate;
-import org.jboss.shrinkwrap.resolver.api.maven.repository.MavenRemoteRepositories;
-import org.jboss.shrinkwrap.resolver.api.maven.repository.MavenRemoteRepository;
-import org.jboss.shrinkwrap.resolver.api.maven.repository.MavenUpdatePolicy;
-import org.jboss.shrinkwrap.resolver.api.maven.strategy.RejectDependenciesStrategy;
 import org.spongepowered.repoindexer.mavenmeta.Metadata;
 
 import java.io.File;
@@ -54,7 +46,6 @@ import javax.xml.bind.Unmarshaller;
  */
 public class EntryPoint {
 
-    private static MavenRemoteRepository mvnremote;
     private static List<SuperStringPair> vsns = Lists.newArrayList();
 
     public static void main(String args[]) {
@@ -103,9 +94,7 @@ public class EntryPoint {
 
     public static void process(File input, File output, Artifact artifact, String ftpUrl, String user, String pass, String remotebase, FTPType type)
             throws IOException, JAXBException {
-        mvnremote = MavenRemoteRepositories.createRemoteRepository("UserRemoteRepo", artifact.getRepo().getUrl(), "default").setUpdatePolicy(
-                MavenUpdatePolicy.UPDATE_POLICY_NEVER);
-        System.out.println("using repo: " + mvnremote.getUrl());
+        System.out.println("using repo: " + artifact.getRepo());
         System.out.println();
         String xml = getIndex(artifact);
         System.out.println(xml);
@@ -226,18 +215,4 @@ public class EntryPoint {
 
     }
 
-    public static String getArtifactUrl(String url, MavenResolvedArtifact artifact) {
-        String resolved = artifact.getResolvedVersion();
-        MavenCoordinate mc = artifact.getCoordinate();
-        if (mc.getClassifier() == null || mc.getClassifier().equals("")) {
-            return url + mc.getGroupId().replace(".", "/") + "/" + mc.getArtifactId().replace(".", "/") + "/" + mc.getVersion() + "/" + mc
-                    .getArtifactId() + "-" + resolved
-                   + "." + mc.getPackaging().getExtension();
-        } else {
-            return url + mc.getGroupId().replace(".", "/") + "/" + mc.getArtifactId().replace(".", "/") + "/" + mc.getVersion() + "/" + mc
-                    .getArtifactId() + "-" + resolved
-                   + "-" + mc.getClassifier()
-                   + "." + mc.getPackaging().getExtension();
-        }
-    }
 }

@@ -33,7 +33,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.output.FileWriterWithEncoding;
 
 import java.io.File;
-import java.io.PrintWriter;
 import java.io.StringReader;
 import java.util.List;
 
