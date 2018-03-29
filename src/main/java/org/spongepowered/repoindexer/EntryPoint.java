@@ -186,7 +186,14 @@ public class EntryPoint {
                     link = getLink(artifact,s, v);
                     exists = checkFile(link);
                     if(exists) {
-                        StringPair spinner = new StringPair(v.classifier, link);
+                        String name = "";
+                        if (v.classifier != null && !v.classifier.isEmpty()){
+                            name = v.classifier;
+                        } else {
+                            name = v.ext;
+                        }
+                        StringPair spinner = new StringPair(name, link);
+
                         ssp.sub.add(spinner);
                     }
                     //System.out.println(exists + " " + link);
