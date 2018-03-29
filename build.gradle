@@ -194,10 +194,10 @@ uploadArchives {
         mavenDeployer {
             configuration = configurations.deployerJars
 
-            if (project.hasProperty("chRepo"))
+            if (project.hasProperty("spongeRepo"))
             {
-                repository(url: project.chRepo) {
-                    authentication(userName: project.chUsername, password: project.chPassword)
+                repository(url: project.spongeRepo) {
+                    authentication(userName: project.spongeUsername, password: project.spongePassword)
                 }
             }
 
